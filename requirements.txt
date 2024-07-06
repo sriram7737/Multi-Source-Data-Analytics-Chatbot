@@ -5,7 +5,6 @@ SpeechRecognition
 asyncio
 beautifulsoup4
 datasets
-io
 json
 logging
 matplotlib
