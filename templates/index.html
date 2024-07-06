@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Source Data Analytics Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            /* Gradient Background */
+            background-image: linear-gradient(to bottom right, #e6f7ff, #b3e0ff); 
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #ffffff;
+            /* Enhanced Shadow and Transition */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+            transition: box-shadow 0.3s ease;
+            border-radius: 10px;
+        }
+        .container:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2); 
+        }
+        h1 {
+            text-align: center;
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+        h3 {
+            text-align: center;
+            color: #4a90e2;
+            opacity: 0.5; /* Make the text transparent */
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .input-group input, .input-group textarea {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            /* Added Box Shadow and Transition */
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s ease;
+        }
+        .input-group input:focus, .input-group textarea:focus {
+            border-color: #4a90e2;
+            outline: none;
+            background-color: #f0f8ff;
+            /* Enhanced Shadow on Focus */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .input-group button {
+            padding: 10px 20px;
+            background-color: #4a90e2;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            /* Added Box Shadow and Hover Effect */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            transition: background-color 0.3s ease, box-shadow 0.3s ease; 
+        }
+        .input-group button:hover {
+            background-color: #2a6496; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+        }
+        .input-group img {
+            cursor: pointer;
+            vertical-align: middle;
+            transition: transform 0.3s, filter 0.3s;
+        }
+        .input-group img:hover {
+            /* Enhanced Image Hover */
+            transform: scale(1.2); 
+            filter: brightness(1.1); 
+        }
+        .analysis {
+            margin-top: 20px;
+        }
+        .wordcloud, .graph {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .content-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #eef6ff;
+            border-radius: 5px;
+        }
+        .content-section h2 {
+            color: #4a90e2;
+        }
+        .content-section p, .content-section ul {
+            color: #555;
+        }
+        .content-section ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4a90e2;
+            color: white;
+            border-radius: 0 0 10px 10px;
+        }
+        .response-box {
+            /* Gradient Background and Hover Effect */
+            background-image: linear-gradient(to bottom, #f0f8ff, #e6f7ff); 
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+        .response-box:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .feedback-buttons button {
+            margin-right: 10px;
+        }
+        .feedback-buttons button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multi-Source Data Analytics Chatbot</h1>
+        <h3>by Sriram Rampelli</h3>
+
+        <!-- General Question Area -->
+        <div class="input-group">
+            <label for="question">negelect this box as it repeats the text as response:</label>
+            <input type="text" id="question" placeholder="Type your question here...">
+            <img src="static/mic_icon.png" alt="Mic" id="mic-icon" style="width: 30px; height: 30px;">
+            <button onclick="askQuestion()">Submit</button>
+        </div>
+
+        <!-- Fact-based and General Question Area -->
+        <div class="input-group">
+            <label for="fact-question">Ask a Fact-based or General Question:</label>
+            <input type="text" id="fact-question" placeholder="Ask about the Presidents, capital cities, etc...">
+            <img src="static/mic_icon.png" alt="Mic" id="fact-mic-icon" style="width: 30px; height: 30px;">
+            <button onclick="askFactQuestion()">Submit</button>
+        </div>
+
+        <!-- Upload Document -->
+        <div class="input-group">
+            <label for="document">Upload a Document:</label>
+            <input type="file" id="document">
+            <button onclick="uploadDocument()">Upload</button>
+        </div>
+
+        <!-- Scrape Website -->
+        <div class="input-group">
+            <label for="website">Scrape a Website:</label>
+            <input type="text" id="website" placeholder="Enter website URL...">
+            <button onclick="scrapeWebsite()">Scrape</button>
+        </div>
+
+        <!-- Ask Question About Uploaded/Scraped Content -->
+        <div class="input-group">
+            <label for="context-question">Ask a Question About the Content:</label>
+            <input type="text" id="context-question" placeholder="Type your question here...">
+            <button onclick="askContextQuestion()">Ask</button>
+        </div>
+
+        <!-- Response Area -->
+        <div class="input-group">
+            <label for="response">Response:</label>
+            <textarea id="response" class="response-box" rows="10" readonly></textarea>
+        </div>
+
+        <!-- Extracted Medical Data Area -->
+        <div class="input-group">
+            <label for="medical-data">Extracted Medical Data:</label>
+            <textarea id="medical-data" class="response-box" rows="10" readonly></textarea>
+        </div>
+
+        <!-- Feedback Area -->
+        <div class="input-group feedback-buttons">
+            <label for="feedback">Was this answer helpful?</label>
+            <button onclick="sendFeedback(true)">Yes</button>
+            <button onclick="sendFeedback(false)">No</button>
+        </div>
+
+        <!-- Analysis Results -->
+        <div class="analysis" id="analysis"></div>
+        <img class="wordcloud" id="wordcloud" alt="Word Cloud">
+        <img class="graph" id="histogram" alt="Histogram">
+        <img class="graph" id="bar_chart" alt="Bar Chart">
+        <img class="graph" id="pie_chart" alt="Pie Chart">
+
+        <!-- Google Feedback Form Link -->
+        <div class="content-section">
+            <h2>Feedback Form</h2>
+            <p>Please provide your feedback using the link below:</p>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSc0KmPj4oIYSZ1gn3AmC6hpy7WKOQ0ytnqS4IcsdZ3NYMbAvA/viewform?usp=sf_link" target="_blank">Feedback Form</a>
+        </div>
+    </div>
+
+    <footer>
+        &copy; Multi-Source Data Analytics Chatbot. All rights reserved.
+    </footer>
+
+    <script>
+        const micIcon = document.getElementById('mic-icon');
+        const factMicIcon = document.getElementById('fact-mic-icon');
+        const questionInput = document.getElementById('question');
+        const factQuestionInput = document.getElementById('fact-question');
+        const contextQuestionInput = document.getElementById('context-question');
+        const responseArea = document.getElementById('response');
+        const medicalDataArea = document.getElementById('medical-data');
+        const analysisDiv = document.getElementById('analysis');
+        const wordcloudImg = document.getElementById('wordcloud');
+        const histogramImg = document.getElementById('histogram');
+        const barChartImg = document.getElementById('bar_chart');
+        const pieChartImg = document.getElementById('pie_chart');
+        let recognition;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                if (recognition.targetInput) {
+                    recognition.targetInput.value = event.results[0][0].transcript;
+                    recognition.stop();
+                }
+            };
+
+            recognition.onerror = function(event) {
+                recognition.stop();
+            };
+        }
+
+        micIcon.onclick = function() {
+            if (recognition) {
+                recognition.targetInput = questionInput;
+                recognition.start();
+            }
+        };
+
+        factMicIcon.onclick = function() {
+            if (recognition) {
+                recognition.targetInput = factQuestionInput;
+                recognition.start();
+            }
+        };
+
+        function askQuestion() {
+            const question = questionInput.value;
+            fetch('/generate_text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: question })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.confidence < 0.7) {
+                    responseArea.value = "I'm not sure about the answer. Can you please provide more details or clarify your question?";
+                } else {
+                    responseArea.value = data.result;
+                }
+            })
+            .catch(error => {
+                responseArea.value = "An error occurred while processing your request.";
+                console.error('Error:', error);
+            });
+        }
+
+        function askFactQuestion() {
+            const question = factQuestionInput.value;
+            fetch('/fact_question', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.confidence < 0.7) {
+                    responseArea.value = "I'm not sure about the answer. Can you please provide more details or clarify your question?";
+                } else {
+                    responseArea.value = data.answer;
+                }
+            })
+            .catch(error => {
+                responseArea.value = "An error occurred while processing your request.";
+                console.error('Error:', error);
+            });
+        }
+
+        function askContextQuestion() {
+            const question = contextQuestionInput.value;
+            fetch('/ask_question', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            })
+            .then(response => response.json())
+            .then(data => {
+                responseArea.value = data.answer || data.error;
+            })
+            .catch(error => {
+                responseArea.value = "An error occurred while processing your request.";
+                console.error('Error:', error);
+            });
+        }
+
+        function uploadDocument() {
+            const documentInput = document.getElementById('document');
+            const formData = new FormData();
+            formData.append('document', documentInput.files[0]);
+
+            fetch('/read_document', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                responseArea.value = JSON.stringify(data, null, 2);
+                if (data.analysis) {
+                    displayAnalysis(data.analysis);
+                }
+                if (data.medical_data) {
+                    displayMedicalData(data.medical_data);
+                }
+            })
+            .catch(error => {
+                responseArea.value = "An error occurred while uploading the document.";
+                console.error('Error:', error);
+            });
+        }
+
+        function scrapeWebsite() {
+            const website = document.getElementById('website').value;
+            fetch('/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: website })
+            })
+            .then(response => response.json())
+            .then(data => {
+                responseArea.value = JSON.stringify(data, null, 2);
+                displayAnalysis(data);
+            })
+            .catch(error => {
+                responseArea.value = "An error occurred while scraping the website.";
+                console.error('Error:', error);
+            });
+        }
+
+        function displayAnalysis(analysis) {
+            analysisDiv.innerHTML = '';
+            if (analysis.title) {
+                analysisDiv.innerHTML += `<div class="content-section"><h2>Title:</h2><p>${analysis.title}</p></div>`;
+            }
+            if (analysis.word_count !== undefined) {
+                analysisDiv.innerHTML += `<div class="content-section"><h2>Word Count:</h2><p>${analysis.word_count}</p></div>`;
+            }
+            if (analysis.summary) {
+                analysisDiv.innerHTML += `<div class="content-section"><h2>Summary:</h2><p>${analysis.summary}</p></div>`;
+            }
+            if (analysis.sentiment) {
+                analysisDiv.innerHTML += `
+                    <div class="content-section">
+                        <h2>Sentiment Analysis:</h2>
+                        <p><strong>Polarity:</strong> ${analysis.sentiment.polarity} (ranges from -1 to 1, where -1 is very negative, 0 is neutral, and 1 is very positive)</p>
+                        <p><strong>Subjectivity:</strong> ${analysis.sentiment.subjectivity} (ranges from 0 to 1, where 0 is very objective and 1 is very subjective)</p>
+                        <p><strong>Positivity:</strong> ${analysis.sentiment.positivity} (positive sentiment score)</p>
+                        <p><strong>Negativity:</strong> ${analysis.sentiment.negativity} (negative sentiment score)</p>
+                        <p><strong>Neutrality:</strong> ${analysis.sentiment.neutrality} (neutral sentiment score)</p>
+                        <p><strong>Compound:</strong> ${analysis.sentiment.compound} (normalized score combining positivity, negativity, and neutrality)</p>
+                    </div>`;
+            }
+            if (analysis.headings && analysis.headings.length > 0) {
+                analysisDiv.innerHTML += `<div class="content-section"><h2>Headings:</h2><ul>${analysis.headings.map(h => `<li>${h}</li>`).join('')}</ul></div>`;
+            }
+            if (analysis.paragraphs && analysis.paragraphs.length > 0) {
+                analysisDiv.innerHTML += `<div class="content-section"><h2>Paragraphs:</h2><ul>${analysis.paragraphs.map(p => `<li>${p}</li>`).join('')}</ul></div>`;
+            }
+            if (analysis.links && analysis.links.length > 0) {
+                analysisDiv.innerHTML += `<div class="content-section"><h2>Links:</h2><ul>${analysis.links.map(l => `<li>${l}</li>`).join('')}</ul></div>`;
+            }
+            if (analysis.wordcloud) {
+                wordcloudImg.src = `data:image/png;base64,${analysis.wordcloud}`;
+            }
+            if (analysis.graphs) {
+                if (analysis.graphs.histogram) {
+                    histogramImg.src = `data:image/png;base64,${analysis.graphs.histogram}`;
+                }
+                if (analysis.graphs.bar_chart) {
+                    barChartImg.src = `data:image/png;base64,${analysis.graphs.bar_chart}`;
+                }
+                if (analysis.graphs.pie_chart) {
+                    pieChartImg.src = `data:image/png;base64,${analysis.graphs.pie_chart}`;
+                }
+            }
+        }
+
+        function displayMedicalData(medical_data) {
+            medicalDataArea.value = JSON.stringify(medical_data, null, 2);
+        }
+
+        function sendFeedback(isHelpful) {
+            const feedback = {
+                question: questionInput.value,
+                answer: responseArea.value,
+                helpful: isHelpful
+            };
+            fetch('/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(feedback)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Thank you for your feedback!');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
