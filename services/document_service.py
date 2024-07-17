@@ -15,110 +15,73 @@ import json
 import xml.etree.ElementTree as ET
 from PIL import Image
 import pytesseract
-import logging
 import pydicom
-import cv2
-import numpy as np
+import logging
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
 # Initialize the summarization pipeline and sentiment analyzer
-summarizer = pipeline("summarization")  # Summarization model from transformers
-analyzer = SentimentIntensityAnalyzer()  # Sentiment analysis model from VADER
+summarizer = pipeline("summarization")
+analyzer = SentimentIntensityAnalyzer()
 
 # Maximum input length for the summarization model
 MAX_INPUT_LENGTH = 1024
 
-# Set up logging configuration
+# Set up logging
 logging.basicConfig(level=logging.DEBUG)
 
 def read_document(document):
-    """
-    Reads a document and extracts its content based on the file type.
-    """
+    filename = document.filename.lower()
+    logging.debug(f"Reading document: {filename}")
     try:
-        if hasattr(document, 'filename'):
-            filename = document.filename.lower()
-        else:
-            filename = document.name.lower()
-        
-        logging.debug(f"Reading document: {filename}")
-        
         if filename.endswith('.pdf'):
-            # Read PDF file
             reader = PdfReader(document)
             text = ""
             for page in reader.pages:
                 text += page.extract_text()
-            logging.debug(f"Extracted text from PDF: {text[:100]}...")  # Log first 100 characters
             return {"type": "text", "content": text}
-        
         elif filename.endswith('.xlsx'):
-            # Read Excel file
             df = pd.read_excel(document)
-            logging.debug(f"DataFrame loaded from Excel: {df.head()}")
-            content = df.to_dict(orient="list")
-            logging.debug(f"Converted DataFrame to dict: {list(content.keys())}")
-            return {"type": "dataframe", "content": content}
-        
+            return {"type": "dataframe", "content": df.to_dict(orient='records')}
         elif filename.endswith('.csv'):
-            # Read CSV file
-            df = pd.read_csv(document, on_bad_lines='skip')
-            logging.debug(f"DataFrame loaded from CSV: {df.head()}")
-            content = df.to_dict(orient="list")
-            logging.debug(f"Converted DataFrame to dict: {list(content.keys())}")
-            return {"type": "dataframe", "content": content}
-        
+            try:
+                df = pd.read_csv(document, on_bad_lines='skip')
+            except UnicodeDecodeError:
+                df = pd.read_csv(document, encoding='ISO-8859-1', on_bad_lines='skip')
+            return {"type": "dataframe", "content": df.to_dict(orient='records')}
         elif filename.endswith('.json'):
-            # Read JSON file
             data = json.load(document)
             df = pd.json_normalize(data)
-            logging.debug(f"DataFrame loaded from JSON: {df.head()}")
-            content = df.to_dict(orient="list")
-            logging.debug(f"Converted DataFrame to dict: {list(content.keys())}")
-            return {"type": "dataframe", "content": content}
-        
+            return {"type": "dataframe", "content": df.to_dict(orient='records')}
         elif filename.endswith('.xml'):
-            # Read XML file
             tree = ET.parse(document)
             root = tree.getroot()
             data = [{child.tag: child.text for child in elem} for elem in root]
             df = pd.DataFrame(data)
-            logging.debug(f"DataFrame loaded from XML: {df.head()}")
-            content = df.to_dict(orient="list")
-            logging.debug(f"Converted DataFrame to dict: {list(content.keys())}")
-            return {"type": "dataframe", "content": content}
-        
+            return {"type": "dataframe", "content": df.to_dict(orient='records')}
         elif filename.endswith('.docx'):
-            # Read DOCX file
             doc = docx.Document(document)
             text = "\n".join([para.text for para in doc.paragraphs])
-            logging.debug(f"Extracted text from DOCX: {text[:100]}...")  # Log first 100 characters
             return {"type": "text", "content": text}
-        
         elif filename.endswith(('.jpg', '.jpeg', '.png')):
-            # Read image file and perform OCR
             image = Image.open(document)
             text = pytesseract.image_to_string(image)
-            logging.debug(f"Extracted text from image: {text[:100]}...")  # Log first 100 characters
             return {"type": "image", "content": text}
-        
         elif filename.endswith('.dcm'):
-            logging.debug("Detected DICOM file format.")
-            return read_medical_image(document)
-        
+            dicom_data = pydicom.dcmread(document)
+            image = dicom_data.pixel_array
+            metadata = {elem.description(): str(elem.value) for elem in dicom_data if elem.tag.group != 0x7FE0}  # Exclude pixel data and convert to string
+            return {"type": "dicom", "content": image, "metadata": metadata}
+        elif filename.endswith('.txt'):
+            text = document.read().decode('utf-8')
+            return {"type": "text", "content": text}
         else:
-            logging.error("Unsupported document type.")
             return {"error": "Unsupported document type."}
-    
     except Exception as e:
         logging.error(f"Error reading document: {e}")
         return {"error": str(e)}
 
 def analyze_document(content):
-    """
-    Analyzes the content of a document based on its type.
-    """
     logging.debug(f"Analyzing document content of type: {content.get('type')}")
     try:
         if content.get("type") == "text":
@@ -126,26 +89,23 @@ def analyze_document(content):
             return analyze_text(text)
         elif content.get("type") == "dataframe":
             df = pd.DataFrame(content["content"])
-            logging.debug(f"DataFrame for analysis: {df.head()}")
+            logging.debug(f"DataFrame created from content: \n{df.head()}")
             text = " ".join(df.apply(lambda x: " ".join(x.dropna().astype(str)), axis=1))
-            logging.debug(f"Generated text from DataFrame: {text[:100]}...")  # Log first 100 characters
             return {**analyze_text(text), **analyze_dataframe(df)}
         elif content.get("type") == "image":
             text = content["content"]
             return analyze_text(text)
-        elif content.get("type") == "medical_image":
-            return analyze_medical_image(content)
+        elif content.get("type") == "dicom":
+            image = content["content"]
+            metadata = content["metadata"]
+            return analyze_dicom(image, metadata)
         else:
-            logging.error("Unable to analyze content: Unsupported content type.")
             return {"error": "Unable to analyze content."}
     except Exception as e:
         logging.error(f"Error analyzing document: {e}")
         return {"error": str(e)}
 
 def analyze_text(text):
-    """
-    Analyzes text content to generate word count, summary, sentiment, and word cloud.
-    """
     try:
         word_count = len(text.split())
         truncated_text = text[:MAX_INPUT_LENGTH]
@@ -176,30 +136,40 @@ def analyze_text(text):
         return {"error": str(e)}
 
 def analyze_dataframe(df):
-    """
-    Analyzes a dataframe to generate statistical summaries and visualizations.
-    """
     try:
-        # Using a safe method to convert DataFrame description to dictionary
-        description = df.describe(include='all').to_dict()
-        logging.debug(f"DataFrame description: {description}")
+        if df.empty:
+            logging.error("DataFrame is empty.")
+            return {"error": "DataFrame is empty."}
 
+        logging.debug(f"DataFrame columns: {df.columns.tolist()}")
+        logging.debug(f"DataFrame head:\n{df.head()}")
+
+        description = df.describe().to_dict()
         numerical_columns = df.select_dtypes(include=['number']).columns.tolist()
         categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
-        
+
+        # Create a text summary of the DataFrame
+        df_summary = df.describe(include='all').to_string()
+        truncated_summary = df_summary[:MAX_INPUT_LENGTH]
+        summary = summarizer(truncated_summary, max_length=100, min_length=30, do_sample=False)[0]['summary_text']
+
         graphs = {}
         if numerical_columns:
-            graphs['histogram'] = generate_histogram(df[numerical_columns])
+            logging.debug(f"Numerical columns: {numerical_columns}")
+            numerical_df = df[numerical_columns]
+            graphs['histogram'] = generate_histogram(numerical_df)
         if categorical_columns:
-            graphs['bar_chart'] = generate_bar_chart(df[categorical_columns])
-        if categorical_columns:
-            graphs['pie_chart'] = generate_pie_chart(df[categorical_columns])
-        
+            logging.debug(f"Categorical columns: {categorical_columns}")
+            categorical_df = df[categorical_columns]
+            graphs['bar_chart'] = generate_bar_chart(categorical_df)
+            graphs['pie_chart'] = generate_pie_chart(categorical_df)
+
         analysis = {
             "rows": df.shape[0],
             "columns": df.shape[1],
             "description": description,
-            "column_summary": {col: {"data_type": str(df[col].dtype), "example_values": df[col].dropna().sample(min(3, len(df[col].dropna()))).tolist()} for col in df.columns},
+            "summary": summary,
+            "column_summary": {col: {"data_type": str(df[col].dtype), "example_values": df[col].dropna().sample(3).tolist()} for col in df.columns},
             "graphs": graphs
         }
         return {"analysis": analysis}
@@ -207,37 +177,69 @@ def analyze_dataframe(df):
         logging.error(f"Error analyzing dataframe: {e}")
         return {"error": str(e)}
 
+def analyze_dicom(image, metadata):
+    try:
+        # First, generate the metadata summary
+        metadata_text = "\n".join([f"{key}: {value}" for key, value in metadata.items()])
+        summary = summarizer(metadata_text, max_length=100, min_length=30, do_sample=False)[0]['summary_text']
+
+        # Generate the image
+        plt.figure(figsize=(10, 10))
+        plt.imshow(image, cmap=plt.cm.gray)
+        plt.axis('off')
+        plt.title('DICOM Image')
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close()
+
+        logging.info("DICOM image analyzed successfully")
+        return {"metadata": metadata, "summary": summary, "dicom_image": img_base64}
+    except Exception as e:
+        logging.error(f"Error analyzing DICOM image: {e}")
+        return {"error": str(e)}
+
 def generate_histogram(df):
-    """
-    Generates histograms for numerical columns in a dataframe.
-    """
     try:
         num_columns = len(df.columns)
+        logging.debug(f"Number of columns: {num_columns}")
+        
+        if num_columns == 0:
+            return {"error": "No columns to plot."}
+
         fig, axes = plt.subplots(nrows=num_columns, ncols=1, figsize=(10, 5*num_columns))
+
         if num_columns == 1:
-            df.hist(ax=axes)
+            axes = [axes]  # Ensure axes is always a list
+            logging.debug(f"Plotting histogram for column: {df.columns[0]}")
+            df.hist(ax=axes[0])
+            axes[0].set_title(f'Histogram of {df.columns[0]}')
+            axes[0].set_xlabel(df.columns[0])
+            axes[0].set_ylabel('Frequency')
         else:
             for i, col in enumerate(df.columns):
+                logging.debug(f"Plotting histogram for column: {col}")
                 ax = axes[i]
                 df[col].hist(ax=ax)
                 ax.set_title(f'Histogram of {col}')
                 ax.set_xlabel(col)
                 ax.set_ylabel('Frequency')
+
         buf = io.BytesIO()
         plt.tight_layout(pad=3.0)
         plt.savefig(buf, format='png')
         buf.seek(0)
         img_base64 = base64.b64encode(buf.read()).decode('utf-8')
         plt.close(fig)
+        logging.debug("Histogram generated successfully")
         return img_base64
     except Exception as e:
         logging.error(f"Error generating histogram: {e}")
         return {"error": str(e)}
 
 def generate_bar_chart(df):
-    """
-    Generates bar charts for categorical columns in a dataframe.
-    """
     try:
         num_columns = len(df.columns)
         fig, axes = plt.subplots(nrows=num_columns, ncols=1, figsize=(10, 5*num_columns))
@@ -262,9 +264,6 @@ def generate_bar_chart(df):
         return {"error": str(e)}
 
 def generate_pie_chart(df):
-    """
-    Generates pie charts for categorical columns in a dataframe.
-    """
     try:
         num_columns = len(df.columns)
         fig, axes = plt.subplots(nrows=num_columns, ncols=1, figsize=(10, 5*num_columns))
@@ -288,9 +287,6 @@ def generate_pie_chart(df):
         return {"error": str(e)}
 
 def generate_wordcloud(text):
-    """
-    Generates a word cloud from text.
-    """
     try:
         wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
         plt.figure(figsize=(10, 5))
@@ -310,49 +306,3 @@ def generate_wordcloud(text):
         logging.error(f"Error generating word cloud: {e}")
         return {"error": str(e)}
 
-def read_medical_image(document):
-    """
-    Reads and extracts information from a DICOM file.
-    """
-    try:
-        # Read DICOM file
-        ds = pydicom.dcmread(document)
-        pixel_array = ds.pixel_array
-
-        # Convert to an 8-bit image for better compatibility with pytesseract
-        image_8bit = cv2.convertScaleAbs(pixel_array, alpha=(255.0 / pixel_array.max()))
-
-        # Perform OCR on the image
-        text = pytesseract.image_to_string(Image.fromarray(image_8bit))
-
-        # Extract metadata
-        metadata = {
-            "PatientName": str(ds.get("PatientName", "N/A")),
-            "StudyDate": str(ds.get("StudyDate", "N/A")),
-            "Modality": str(ds.get("Modality", "N/A")),
-            "BodyPartExamined": str(ds.get("BodyPartExamined", "N/A"))
-        }
-
-        return {"type": "medical_image", "content": text, "metadata": metadata}
-    except Exception as e:
-        logging.error(f"Error reading medical image: {e}")
-        return {"error": str(e)}
-
-def analyze_medical_image(content):
-    """
-    Analyzes the content and metadata of a medical image.
-    """
-    try:
-        text = content["content"]
-        metadata = content["metadata"]
-
-        # Perform any specific medical report analysis (e.g., keywords, diagnoses extraction)
-        analysis = analyze_text(text)
-        analysis["metadata"] = metadata
-
-        return {"analysis": analysis}
-    except Exception as e:
-        logging.error(f"Error analyzing medical image: {e}")
-        return {"error": str(e)}
-
-# Additional helper functions or updates can be added as needed.
