@@ -1,6 +1,10 @@
+## please provide feedback using the feedback from
+
 # Multi-Source Data Analytics Chatbot
 
 This project is a multi-source data analytics chatbot application built using Flask and various Python libraries. The chatbot is capable of handling general questions using Wikipedia, fine-tuned GPT-2 model, and can analyze various document formats, create visualizations, perform sentiment analysis, summarization, and more.
+
+
 
 ## Features
 
@@ -101,3 +105,5 @@ The various open-source libraries used in this project.
 Sriram Rampelli 
 mail: sriramrampelli15@gmail.com
 linkdin: https://www.linkedin.com/in/sriram-rampelli-b41a75178/ 
+
+
