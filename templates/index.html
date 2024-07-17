@@ -31,11 +31,10 @@
             color: #4a90e2;
             margin-bottom: 10px;
         }
-        h3 {
+        h2 {
             text-align: center;
             color: #4a90e2;
-            opacity: 0.5; /* Make the text transparent */
-            margin-bottom: 20px;
+            margin-top: 0;
         }
         .input-group {
             margin-bottom: 20px;
@@ -145,11 +144,11 @@
 <body>
     <div class="container">
         <h1>Multi-Source Data Analytics Chatbot</h1>
-        <h3>by Sriram Rampelli</h3>
+        <h2>by Sriram Rampelli</h2>
 
         <!-- General Question Area -->
         <div class="input-group">
-            <label for="question">negelect this box as it repeats the text as response:</label>
+            <label for="question">Neglect this box as it repeats the text as response:</label>
             <input type="text" id="question" placeholder="Type your question here...">
             <img src="static/mic_icon.png" alt="Mic" id="mic-icon" style="width: 30px; height: 30px;">
             <button onclick="askQuestion()">Submit</button>
@@ -190,12 +189,6 @@
             <textarea id="response" class="response-box" rows="10" readonly></textarea>
         </div>
 
-        <!-- Extracted Medical Data Area -->
-        <div class="input-group">
-            <label for="medical-data">Extracted Medical Data:</label>
-            <textarea id="medical-data" class="response-box" rows="10" readonly></textarea>
-        </div>
-
         <!-- Feedback Area -->
         <div class="input-group feedback-buttons">
             <label for="feedback">Was this answer helpful?</label>
@@ -229,7 +222,6 @@
         const factQuestionInput = document.getElementById('fact-question');
         const contextQuestionInput = document.getElementById('context-question');
         const responseArea = document.getElementById('response');
-        const medicalDataArea = document.getElementById('medical-data');
         const analysisDiv = document.getElementById('analysis');
         const wordcloudImg = document.getElementById('wordcloud');
         const histogramImg = document.getElementById('histogram');
@@ -349,9 +341,6 @@
                 if (data.analysis) {
                     displayAnalysis(data.analysis);
                 }
-                if (data.medical_data) {
-                    displayMedicalData(data.medical_data);
-                }
             })
             .catch(error => {
                 responseArea.value = "An error occurred while uploading the document.";
@@ -391,8 +380,8 @@
                 analysisDiv.innerHTML += `<div class="content-section"><h2>Summary:</h2><p>${analysis.summary}</p></div>`;
             }
             if (analysis.sentiment) {
-                analysisDiv.innerHTML += `
-                    <div class="content-section">
+                analysisDiv.innerHTML += 
+                    `<div class="content-section">
                         <h2>Sentiment Analysis:</h2>
                         <p><strong>Polarity:</strong> ${analysis.sentiment.polarity} (ranges from -1 to 1, where -1 is very negative, 0 is neutral, and 1 is very positive)</p>
                         <p><strong>Subjectivity:</strong> ${analysis.sentiment.subjectivity} (ranges from 0 to 1, where 0 is very objective and 1 is very subjective)</p>
@@ -425,10 +414,6 @@
                     pieChartImg.src = `data:image/png;base64,${analysis.graphs.pie_chart}`;
                 }
             }
-        }
-
-        function displayMedicalData(medical_data) {
-            medicalDataArea.value = JSON.stringify(medical_data, null, 2);
         }
 
         function sendFeedback(isHelpful) {
