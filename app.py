@@ -14,8 +14,9 @@ import speech_recognition as sr
 
 app = Flask(__name__)
 
-# Load fine-tuned GPT-2 model
-model_path = 'fine_tuned_gpt2_wikipedia'
+#Load fine-tuned GPT-2 model 
+#clone the model if needed  from "git clone https://huggingface.co/sriram7737/finetuned_gpt2_on_wiki"
+model_path = 'sriram7737/finetuned_gpt2_on_wiki'
 tokenizer = GPT2Tokenizer.from_pretrained(model_path)
 model = GPT2LMHeadModel.from_pretrained(model_path)
 
